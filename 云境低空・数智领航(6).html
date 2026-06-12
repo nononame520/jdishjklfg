@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>云境低空・数智领航 — 杭州余杭低空气象经济地理研学AI平台</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-polylinedecorator@1.6.0/dist/leaflet-polylinedecorator.js"></script>
+    <style>
+        :root {
+            --bg-deep: #0a0e17; --bg-panel: #0d1117; --bg-card: #111827; --bg-input: #1a1f2e;
+            --blue-neon: #00b4d8; --blue-deep: #0077b6; --blue-glow: #1e90ff; --gold: #d4a853;
+            --gold-light: #f0c96d; --text-primary: #e0e6f0; --text-secondary: #a0b4c8;
+            --text-muted: #6b7d95; --border-subtle: #1e2a3a; --border-glow: #1a5f8a;
+            --danger: #e0556a; --success: #2ecc71; --warning: #f39c12;
+            --radius-sm: 6px; --radius: 10px; --radius-lg: 16px;
+            --shadow-card: 0 4px 24px rgba(0,0,0,0.5); --shadow-glow: 0 0 30px rgba(0,180,216,0.25);
+            --font-sans: 'PingFang SC','Microsoft YaHei','Helvetica Neue',sans-serif;
+            --transition-fast: 0.2s cubic-bezier(0.4,0,0.2,1);
+            --transition-smooth: 0.4s cubic-bezier(0.4,0,0.2,1);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        html { font-size:15px; scroll-behavior:smooth; }
+        body {
+            font-family:var(--font-sans); background:var(--bg-deep); color:var(--text-primary);
+            min-height:100vh; line-height:1.6;
+            background-image: radial-gradient(ellipse at 20% 15%, rgba(0,180,216,0.06) 0%, transparent 60%),
+                            radial-gradient(ellipse at 75% 80%, rgba(30,144,255,0.04) 0%, transparent 55%),
+                            radial-gradient(ellipse at 50% 50%, rgba(0,119,182,0.03) 0%, transparent 70%);
+            background-attachment: fixed;
+        }
+        ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-track { background:var(--bg-deep); }
+        ::-webkit-scrollbar-thumb { background:var(--border-glow); border-radius:3px; }
+        ::-webkit-scrollbar-thumb:hover { background:var(--blue-neon); }
+        .app-header {
+            background:var(--bg-panel); border-bottom:1px solid var(--border-subtle);
+            padding:12px 24px; display:flex; align-items:center; justify-content:space-between;
+            flex-wrap:wrap; gap:12px; position:sticky; top:0; z-index:100; box-shadow:0 2px 20px rgba(0,0,0,0.5);
+        }
+        .logo-area { display:flex; align-items:center; gap:14px; cursor:pointer; }
+        .logo-icon {
+            width:44px; height:44px; border-radius:50%; background:linear-gradient(135deg,#0d2137,#0a1628);
+            border:2px solid var(--blue-neon); display:flex; align-items:center; justify-content:center;
+            box-shadow:var(--shadow-glow); animation:logoPulse 3s ease-in-out infinite;
+        }
+        @keyframes logoPulse {
+            0%,100% { box-shadow:0 0 20px rgba(0,180,216,0.3); }
+            50% { box-shadow:0 0 40px rgba(0,180,216,0.6),0 0 60px rgba(0,180,216,0.2); }
+        }
+        .logo-icon svg { width:24px; height:24px; fill:none; stroke:var(--blue-neon); stroke-width:2; }
+        .logo-text { font-weight:700; font-size:1.25rem; letter-spacing:0.04em; color:#fff; text-shadow:0 0 20px rgba(0,180,216,0.5); }
+        .logo-text span { color:var(--gold); font-size:0.75rem; display:block; letter-spacing:0.08em; font-weight:400; text-shadow:none; }
+        .header-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+        .btn {
+            padding:8px 18px; border-radius:var(--radius-sm); font-weight:600; cursor:pointer;
+            border:1px solid transparent; transition:var(--transition-fast); font-size:0.9rem;
+            letter-spacing:0.02em; font-family:var(--font-sans); white-space:nowrap;
+        }
+        .btn-primary { background:var(--blue-deep); color:#fff; border-color:var(--blue-neon); box-shadow:0 0 14px rgba(0,180,216,0.2); }
+        .btn-primary:hover { background:#0088c7; box-shadow:0 0 24px rgba(0,180,216,0.45); transform:translateY(-1px); }
+        .btn-outline { background:transparent; color:var(--blue-neon); border-color:var(--border-glow); }
+        .btn-outline:hover { background:rgba(0,180,216,0.08); border-color:var(--blue-neon); }
+        .btn-gold { background:linear-gradient(135deg,#b8861e,#d4a853); color:#1a0e00; font-weight:700; border:none; box-shadow:0 0 18px rgba(212,168,83,0.35); }
+        .btn-gold:hover { box-shadow:0 0 30px rgba(212,168,83,0.6); transform:translateY(-1px); }
+        .btn-sm { padding:5px 12px; font-size:0.8rem; border-radius:4px; }
+        .nav-tabs {
+            display:flex; gap:0; background:var(--bg-panel); border-bottom:2px solid var(--border-subtle);
+            overflow-x:auto; padding:0 16px; position:sticky; top:72px; z-index:90; scrollbar-width:none;
+        }
+        .nav-tabs::-webkit-scrollbar { display:none; }
+        .nav-tab {
+            padding:14px 20px; cursor:pointer; white-space:nowrap; border-bottom:3px solid transparent;
+            transition:var(--transition-smooth); font-weight:600; color:var(--text-muted);
+            letter-spacing:0.03em; font-size:0.9rem; user-select:none;
+        }
+        .nav-tab:hover { color:var(--text-primary); background:rgba(255,255,255,0.02); }
+        .nav-tab.active { color:var(--blue-neon); border-bottom-color:var(--blue-neon); text-shadow:0 0 12px rgba(0,180,216,0.4); }
+        .main-container { max-width:1100px; margin:0 auto; padding:24px 20px 60px; }
+        .page-section { display:none; animation:fadeSlideIn 0.45s ease-out; }
+        .page-section.active { display:block; }
+        @keyframes fadeSlideIn { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+        .section-title { font-size:1.6rem; font-weight:700; margin-bottom:8px; color:#fff; display:flex; align-items:center; gap:10px; }
+        .section-title .icon-dot { width:10px; height:10px; border-radius:50%; background:var(--blue-neon); box-shadow:0 0 12px var(--blue-neon); animation:dotPulse 2s infinite; }
+        @keyframes dotPulse { 0%,100% { transform:scale(1); } 50% { transform:scale(1.8); } }
+        .section-subtitle { color:var(--text-secondary); margin-bottom:20px; font-size:0.95rem; }
+        .card {
+            background:var(--bg-card); border:1px solid var(--border-subtle); border-radius:var(--radius-lg);
+            padding:24px; margin-bottom:20px; box-shadow:var(--shadow-card); transition:var(--transition-smooth);
+            position:relative; overflow:hidden;
+        }
+        .card::before {
+            content:''; position:absolute; top:0; left:0; right:0; height:2px;
+            background:linear-gradient(90deg,transparent,var(--blue-neon),transparent);
+            opacity:0; transition:opacity 0.5s;
+        }
+        .card:hover::before { opacity:0.7; }
+        .card-title { font-weight:700; font-size:1.1rem; margin-bottom:12px; color:#fff; display:flex; align-items:center; gap:8px; }
+        .form-group { margin-bottom:14px; }
+        .form-group label { display:block; font-weight:600; margin-bottom:4px; color:var(--text-secondary); font-size:0.85rem; }
+        .form-group input, .form-group textarea {
+            width:100%; padding:10px 14px; background:var(--bg-input); border:1px solid var(--border-subtle);
+            border-radius:var(--radius-sm); color:#fff; font-family:var(--font-sans); font-size:0.95rem;
+            transition:var(--transition-fast);
+        }
+        .form-group input:focus, .form-group textarea:focus { outline:none; border-color:var(--blue-neon); box-shadow:0 0 12px rgba(0,180,216,0.2); }
+        .form-group textarea { resize:vertical; min-height:90px; }
+        .form-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+        .table-mini { width:100%; border-collapse:collapse; font-size:0.85rem; margin-top:8px; }
+        .table-mini th, .table-mini td { padding:8px 10px; border:1px solid var(--border-subtle); text-align:center; color:var(--text-secondary); }
+        .table-mini th { background:var(--bg-input); color:var(--blue-neon); font-weight:700; }
+        .table-mini td { background:rgba(17,24,39,0.6); }
+        .table-mini td input { width:80px; background:var(--bg-input); border:1px solid var(--border-subtle); color:#fff; padding:3px; border-radius:3px; text-align:center; }
+        .highlight-score { font-size:2rem; font-weight:900; color:var(--gold); text-shadow:0 0 20px rgba(212,168,83,0.5); animation:scorePop 0.6s ease-out; }
+        @keyframes scorePop { 0% { transform:scale(0.5); opacity:0; } 60% { transform:scale(1.15); } 100% { transform:scale(1); opacity:1; } }
+        .progress-bar-wrap { background:var(--bg-input); border-radius:20px; height:22px; overflow:hidden; margin:8px 0; border:1px solid var(--border-subtle); }
+        .progress-bar-fill { height:100%; border-radius:20px; transition:width 0.8s; background:linear-gradient(90deg,#0077b6,#00b4d8,#00d4ff); box-shadow:inset 0 0 20px rgba(0,180,216,0.4); }
+        .badge-medal { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:20px; font-size:0.8rem; font-weight:700; border:1px solid; }
+        .badge-medal.locked { background:transparent; color:var(--text-muted); border-color:#2a3040; opacity:0.5; }
+        .badge-medal.bronze { background:rgba(205,127,50,0.1); color:#cd7f32; border-color:#cd7f32; box-shadow:0 0 10px rgba(205,127,50,0.2); }
+        .badge-medal.silver { background:rgba(192,192,192,0.1); color:#c0c0c0; border-color:#c0c0c0; box-shadow:0 0 14px rgba(192,192,192,0.25); }
+        .badge-medal.gold { background:rgba(212,168,83,0.1); color:var(--gold-light); border-color:var(--gold); box-shadow:0 0 14px rgba(212,168,83,0.3); }
+        .badge-medal.master { background:linear-gradient(135deg,rgba(212,168,83,0.2),rgba(240,201,109,0.15)); color:var(--gold-light); border-color:var(--gold); box-shadow:0 0 24px rgba(212,168,83,0.4); }
+        .canvas-wrap { background:var(--bg-input); border-radius:var(--radius); border:1px solid var(--border-subtle); overflow:hidden; margin:12px 0; }
+        canvas { display:block; width:100%; height:auto; }
+        .tag { display:inline-block; padding:4px 10px; border-radius:12px; font-size:0.75rem; font-weight:600; margin:3px 4px; }
+        .tag-risk { background:rgba(224,85,106,0.2); color:#e0556a; border:1px solid rgba(224,85,106,0.4); }
+        .tag-safe { background:rgba(46,204,113,0.2); color:#2ecc71; border:1px solid rgba(46,204,113,0.4); }
+        .tag-warn { background:rgba(243,156,18,0.2); color:#f39c12; border:1px solid rgba(243,156,18,0.4); }
+        .toast { position:fixed; top:20px; right:20px; z-index:9999; padding:14px 22px; border-radius:var(--radius); font-weight:700; box-shadow:0 8px 30px rgba(0,0,0,0.6); animation:toastIn 0.4s ease,toastOut 0.4s 2.2s ease forwards; }
+        .toast-success { background:#0d2618; border:1px solid #2ecc71; color:#2ecc71; }
+        .toast-info { background:#0a1a28; border:1px solid #00b4d8; color:#00b4d8; }
+        @keyframes toastIn { from { transform:translateX(120%); opacity:0; } to { transform:translateX(0); opacity:1; } }
+        @keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(-20px); } }
+        #task2Map { width:100%; height:420px; border-radius:12px; border:1px solid var(--border-glow); background:#0a1017; }
+        .leaflet-control-layers { background: rgba(17,24,39,0.9); border-radius: 8px; padding: 8px; border: 1px solid var(--border-glow); }
+        .leaflet-control-layers label { color: #e0e6f0; font-size: 13px; }
+        .leaflet-control-layers input { margin-right: 6px; }
+        @media (max-width:768px) {
+            .app-header { padding:10px 14px; } .logo-text { font-size:1rem; }
+            .nav-tabs { top:60px; padding:0 8px; } .nav-tab { padding:10px 12px; font-size:0.75rem; }
+            .main-container { padding:14px 10px 60px; } .card { padding:16px; }
+            .form-row { grid-template-columns:1fr 1fr; } .btn { padding:7px 13px; font-size:0.8rem; }
+            .section-title { font-size:1.3rem; }
+        }
+        @media (max-width:480px) {
+            .form-row { grid-template-columns:1fr; }
+            .nav-tab { padding:8px 10px; font-size:0.7rem; }
+        }
+        .stamp-area { border:2px dashed var(--border-glow); border-radius:var(--radius); padding:16px; text-align:center; cursor:pointer; min-height:80px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; }
+        .stamp-area:hover { border-color:var(--blue-neon); background:rgba(0,180,216,0.04); }
+        .stamp-area.stamped { border-color:var(--gold); border-style:solid; background:rgba(212,168,83,0.06); }
+        .stamp-icon { font-size:2.5rem; }
+        .quiz-option { display:block; padding:10px 14px; margin:5px 0; background:var(--bg-input); border:1px solid var(--border-subtle); border-radius:var(--radius-sm); cursor:pointer; text-align:left; width:100%; color:var(--text-primary); }
+        .quiz-option:hover { border-color:var(--blue-neon); background:#1c2638; }
+        .quiz-option.correct { border-color:var(--success)!important; background:rgba(46,204,113,0.15)!important; }
+        .quiz-option.wrong { border-color:var(--danger)!important; background:rgba(224,85,106,0.15)!important; }
+    </style>
+</head>
+<body>
+<header class="app-header">
+    <div class="logo-area" onclick="switchTab('page-home')" title="返回首页">
+        <div class="logo-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="4" stroke="#00b4d8" fill="none" stroke-width="2"/><path d="M8 14l-4 6h16l-4-6" stroke="#00b4d8" fill="none" stroke-width="2"/><line x1="12" y1="6" x2="12" y2="2" stroke="#d4a853" stroke-width="1.5"/><circle cx="12" cy="2" r="1.5" fill="#d4a853"/></svg>
+        </div>
+        <div class="logo-text">云境低空・数智领航<span>中国飞谷 · 杭州余杭低空经济研学AI平台 · 云境低空AI实验室</span></div>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-outline btn-sm" onclick="saveAllData()">💾 一键保存</button>
+        <button class="btn btn-outline btn-sm" onclick="resetAllData()">🔄 重置</button>
+        <span style="color:var(--text-muted);font-size:0.75rem;">📅 <span id="header-date"></span></span>
+    </div>
+</header>
+
+<nav class="nav-tabs">
+    <div class="nav-tab active" data-page="page-home" onclick="switchTab('page-home')">🏠 首页总控台</div>
+    <div class="nav-tab" data-page="page-task1" onclick="switchTab('page-task1')">🔍 任务一·气象侦探</div>
+    <div class="nav-tab" data-page="page-task2" onclick="switchTab('page-task2')">✈️ 任务二·航线设计</div>
+    <div class="nav-tab" data-page="page-task3" onclick="switchTab('page-task3')">🎯 任务三·文旅调研</div>
+    <div class="nav-tab" data-page="page-task4" onclick="switchTab('page-task4')">📝 项目四·创业营</div>
+    <div class="nav-tab" data-page="page-result" onclick="switchTab('page-result')">🏆 成果中心</div>
+</nav>
+
+<div class="main-container">
+    <!-- 首页 -->
+    <section class="page-section active" id="page-home">
+        <div class="section-title"><span class="icon-dot"></span>研学总控台</div>
+        <p class="section-subtitle">云境低空 · 数智领航 — 杭州余杭低空气象经济地理研学AI平台</p>
+        <div class="card">
+            <div class="card-title">👤 学生信息录入</div>
+            <div class="form-row">
+                <div class="form-group"><label>姓名</label><input type="text" id="stuName" placeholder="请输入姓名" onchange="autoSave()"></div>
+                <div class="form-group"><label>小组</label><input type="text" id="stuGroup" placeholder="如：第3小组" onchange="autoSave()"></div>
+                <div class="form-group"><label>日期</label><input type="date" id="stuDate" onchange="autoSave()"></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">🏅 勋章进度</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;" id="badgeRow">
+                <span class="badge-medal locked" id="badge-0">🔒 气象侦探</span>
+                <span class="badge-medal locked" id="badge-1">🔒 航线设计师</span>
+                <span class="badge-medal locked" id="badge-2">🔒 文旅调研员</span>
+                <span class="badge-medal locked" id="badge-3">🔒 低空建言者</span>
+                <span class="badge-medal locked" id="badge-master">🔒 全能领航员</span>
+            </div>
+            <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar" style="width:0%;"></div></div>
+            <p style="color:var(--text-muted);font-size:0.8rem;">金牌勋章数：<span id="goldCount">0</span>/4 | 总分：<span id="totalScore">0</span>/400</p>
+        </div>
+        <div class="card">
+            <div class="card-title">🚀 任务入口</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+                <button class="btn btn-primary" onclick="switchTab('page-task1')">🔍 任务一：低空气象数据侦探</button>
+                <button class="btn btn-primary" onclick="switchTab('page-task2')">✈️ 任务二：AI航线设计师</button>
+                <button class="btn btn-primary" onclick="switchTab('page-task3')">🎯 任务三：低空文旅调研员</button>
+                <button class="btn btn-primary" onclick="switchTab('page-task4')">📝 项目四：未来企业创业营</button>
+            </div>
+        </div>
+        <div class="card" style="border-left:3px solid var(--gold);">
+            <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.8;">
+                📌 <strong>活动主题：</strong>本次研学以“低空气象·经济地理”为核心，融合气象观测、航线设计、文旅调研与发展建言，带你深度探索杭州余杭低空经济新未来。
+            </p>
+            <p style="color:var(--text-muted);font-size:0.75rem;margin-top:8px;">🛡️ 安全贴士：遵守空域管理规定 | 📞 紧急联系：余杭低空研学基地 0571-XXXX-XXXX | 中国飞谷·云境低空AI实验室</p>
+        </div>
+    </section>
+
+    <!-- 任务一 -->
+    <section class="page-section" id="page-task1">
+        <div class="section-title"><span class="icon-dot"></span>任务一 · 低空气象数据侦探</div>
+        <p class="section-subtitle">采集地面至100米气象数据，与AI模拟对比分析</p>
+        <div class="card">
+            <div class="card-title">🌡️ 气象数据采集表</div>
+            <div class="table-mini" style="overflow-x:auto;">
+                <table>
+                    <thead><tr><th>高度层</th><th>气温(℃)</th><th>风向</th><th>风速(m/s)</th><th>能见度(km)</th><th>特殊现象</th></tr></thead>
+                    <tbody>
+                        <tr><td>地面</td>
+                            <td><input type="number" id="t1_temp_0" value="22" onchange="autoSave()"></td>
+                            <td><input type="text" id="t1_wdir_0" value="东北" onchange="autoSave()"></td>
+                            <td><input type="number" id="t1_ws_0" value="3.2" step="0.1" onchange="autoSave()"></td>
+                            <td><input type="number" id="t1_vis_0" value="8.5" step="0.1" onchange="autoSave()"></td>
+                            <td><input type="text" id="t1_sp_0" value="晴" onchange="autoSave()"></td>
+                        </tr>
+                        <tr><td>50米</td>
+                            <td><input type="number" id="t1_temp_50" value="20.5" onchange="autoSave()"></td>
+                            <td><input type="text" id="t1_wdir_50" value="东北偏北" onchange="autoSave()"></td>
+                            <td><input type="number" id="t1_ws_50" value="5.8" step="0.1" onchange="autoSave()"></td>
+                            <td><input type="number" id="t1_vis_50" value="7.2" step="0.1" onchange="autoSave()"></td>
+                            <td><input type="text" id="t1_sp_50" value="微风" onchange="autoSave()"></td>
+                        </tr>
+                        <tr><td>100米</td>
+                            <td><input type="number" id="t1_temp_100" value="18.8" onchange="autoSave()"></td>
+                            <td><input type="text" id="t1_wdir_100" value="北" onchange="autoSave()"></td>
+                            <td><input type="number" id="t1_ws_100" value="8.1" step="0.1" onchange="autoSave()"></td>
+                            <td><input type="number" id="t1_vis_100" value="6.0" step="0.1" onchange="autoSave()"></td>
+                            <td><input type="text" id="t1_sp_100" value="阵风" onchange="autoSave()"></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">🤖 AI模拟数据对比表 & 误差分析</div>
+            <table class="table-mini">
+                <thead><tr><th>指标</th><th>实测值</th><th>AI模拟值</th><th>误差</th></tr></thead>
+                <tbody>
+                    <tr><td>地面风速(m/s)</td><td id="t1_real_0">3.2</td><td id="t1_ai_0">3.0</td><td id="t1_err_0">0.2</td></tr>
+                    <tr><td>50米风速(m/s)</td><td id="t1_real_50">5.8</td><td id="t1_ai_50">5.5</td><td id="t1_err_50">0.3</td></tr>
+                    <tr><td>100米风速(m/s)</td><td id="t1_real_100">8.1</td><td id="t1_ai_100">7.8</td><td id="t1_err_100">0.3</td></tr>
+                    <tr><td>风切变指数</td><td id="t1_shear_real">—</td><td id="t1_shear_ai">—</td><td id="t1_shear_err">—</td></tr>
+                </tbody>
+            </table>
+            <div style="margin-top:12px;padding:12px;background:rgba(0,180,216,0.05);border-radius:8px;">
+                <strong style="color:var(--blue-neon);">📋 AI误差分析提示：</strong><br>
+                <span class="tag tag-warn">自然原因：①地形扰动 ②瞬时气流变化</span>
+                <span class="tag tag-risk">人为原因：①仪器读数误差 ②操作延迟</span>
+            </div>
+            <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="refreshTask1AI()">🔄 重新生成AI模拟数据</button>
+        </div>
+        <div class="card">
+            <div class="card-title">📈 低空气象垂直剖面图（AI自动绘制）</div>
+            <div class="canvas-wrap"><canvas id="chartTask1" width="700" height="400"></canvas></div>
+            <button class="btn btn-outline btn-sm" onclick="drawChartTask1()">🔄 刷新图表</button>
+        </div>
+        <div class="card">
+            <div class="card-title">✅ 完成盖章区</div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+                <label><input type="checkbox" id="t1_check1" onchange="autoSave()"> 数据完整</label>
+                <label><input type="checkbox" id="t1_check2" onchange="autoSave()"> 误差合理</label>
+                <label><input type="checkbox" id="t1_check3" onchange="autoSave()"> 剖面规范</label>
+            </div>
+            <div class="stamp-area" id="t1Stamp" onclick="toggleStamp('t1Stamp','t1')">
+                <span class="stamp-icon">🖐️</span><span style="color:var(--text-muted);">点击盖章（教师签字上传区）</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 任务二 -->
+    <section class="page-section" id="page-task2">
+        <div class="section-title"><span class="icon-dot"></span>任务二 · AI航线设计师</div>
+        <p class="section-subtitle">设计杭州余杭民用无人机试飞运行基地→西溪湿地低空航线，AI自动评估适飞性</p>
+        <div class="card">
+            <div class="card-title">🗺️ 航线设计输入</div>
+            <div class="form-row">
+                <div class="form-group"><label>起点</label><input type="text" value="南湖未来科学园无人机基地" readonly></div>
+                <div class="form-group"><label>终点</label><input type="text" value="西溪湿地公园北门" readonly></div>
+            </div>
+            <div class="form-group"><label>自主航线描述</label>
+                <textarea id="t2_route_desc">南湖未来科学园无人机基地→闲林港河道→英特外国语北侧→仓前居民区西北侧→五常湿地东侧边缘→文二西路南侧→西溪湿地公园北门</textarea>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin:8px 0;">
+                <span class="tag tag-warn">⊗ 绕飞障碍：余杭互通G56杭瑞高速高架</span>
+                <span class="tag tag-safe">🟢 鸟类栖息地禁飞区：西溪核心湿地</span>
+                <span class="tag tag-warn">🟡 绕城高架：途经段注意高度限制</span>
+            </div>
+            <button class="btn btn-primary" onclick="generateRouteFromText()">🛤️ 生成矢量路线</button>
+            <span id="routeGenStatus" style="color:var(--text-muted);font-size:0.8rem;margin-left:10px;"></span>
+        </div>
+        <div class="card">
+            <div class="card-title">🗺️ 航线可视化地图</div>
+            <div id="task2Map"></div>
+        </div>
+        <div class="card">
+            <div class="card-title">📊 AI适飞性评估表（自动打分）</div>
+            <table class="table-mini">
+                <thead><tr><th>评估维度</th><th>评分</th><th>说明</th></tr></thead>
+                <tbody>
+                    <tr><td>气象安全</td><td id="t2_score_wx">—</td><td id="t2_comment_wx">—</td></tr>
+                    <tr><td>生态法规</td><td id="t2_score_eco">—</td><td id="t2_comment_eco">—</td></tr>
+                    <tr><td>通勤效率</td><td id="t2_score_eff">—</td><td id="t2_comment_eff">—</td></tr>
+                </tbody>
+            </table>
+            <div style="text-align:center;margin-top:16px;">
+                <span>综合评分：</span><span class="highlight-score" id="t2_total_score">—</span><span>/100</span>
+            </div>
+            <div style="margin-top:10px;padding:10px;background:rgba(0,180,216,0.04);border-radius:8px;">
+                <strong>📋 主要气象风险：</strong><span id="t2_risk_main">—</span><br>
+                <strong>🕐 建议起飞时段：</strong><span id="t2_best_time">—</span><br>
+                <strong>📏 预估航线里程：</strong><span id="t2_distance">—</span>
+            </div>
+            <button class="btn btn-primary btn-sm" style="margin-top:8px;" onclick="runTask2Assessment()">🤖 AI自动评估打分</button>
+        </div>
+        <div class="card">
+            <div class="card-title">📝 真题闯关</div>
+            <div id="quizArea">
+                <div><strong>1. eVTOL的特点是：</strong>
+                    <button class="quiz-option" onclick="checkQuiz(this,'C')">A. 需要长跑道起降</button>
+                    <button class="quiz-option" onclick="checkQuiz(this,'C')">B. 仅适合长途运输</button>
+                    <button class="quiz-option" onclick="checkQuiz(this,'C')">C. 垂直起降、灵活便捷</button>
+                    <button class="quiz-option" onclick="checkQuiz(this,'C')">D. 完全依赖燃油动力</button>
+                </div>
+                <div><strong>2. 国家大力发展低空经济的战略意义：</strong>
+                    <button class="quiz-option" onclick="checkQuiz(this,'A')">A. 培育新经济增长点、促进产业升级</button>
+                    <button class="quiz-option" onclick="checkQuiz(this,'A')">B. 仅用于军事侦察</button>
+                    <button class="quiz-option" onclick="checkQuiz(this,'A')">C. 替代所有地面交通</button>
+                    <button class="quiz-option" onclick="checkQuiz(this,'A')">D. 减少城市人口密度</button>
+                </div>
+                <div><strong>3. 余杭发展低空经济的优势：</strong>
+                    <button class="quiz-option" onclick="checkQuiz(this,'B')">A. 地处偏远、人口稀少</button>
+                    <button class="quiz-option" onclick="checkQuiz(this,'B')">B. 科创资源丰富、文旅需求旺盛</button>
+                    <button class="quiz-option" onclick="checkQuiz(this,'B')">C. 缺乏基础设施</button>
+                    <button class="quiz-option" onclick="checkQuiz(this,'B')">D. 空域完全封闭</button>
+                </div>
+            </div>
+            <p id="quizResult" style="color:var(--success);"></p>
+        </div>
+        <div class="card">
+            <div class="card-title">✅ 完成盖章区</div>
+            <div class="stamp-area" id="t2Stamp" onclick="toggleStamp('t2Stamp','t2')">
+                <span class="stamp-icon">🖐️</span><span style="color:var(--text-muted);">点击盖章确认</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 任务三 -->
+    <section class="page-section" id="page-task3">
+        <div class="section-title"><span class="icon-dot"></span>任务三 · 低空文旅调研员</div>
+        <p class="section-subtitle">业态观察与访谈记录，提出创新方案</p>
+        <div class="card">
+            <div class="card-title">📋 业态观察记录表</div>
+            <table class="table-mini" style="overflow-x:auto;">
+                <thead><tr><th>业态类型</th><th>运营主体</th><th>核心业务</th><th>收费(元)</th><th>气象依赖</th><th>地理分析</th><th>风险</th></tr></thead>
+                <tbody>
+                    <tr><td>低空旅拍</td><td><input type="text" id="t3_op1" value="飞阅余杭" onchange="autoSave()"></td><td><input type="text" id="t3_biz1" value="航拍摄影" onchange="autoSave()"></td><td><input type="number" id="t3_fee1" value="299" onchange="autoSave()"></td><td><input type="text" id="t3_wxdep1" value="高" onchange="autoSave()"></td><td><input type="text" id="t3_geo1" value="湿地景观" onchange="autoSave()"></td><td><input type="text" id="t3_risk1" value="信号干扰" onchange="autoSave()"></td></tr>
+                    <tr><td>无人机租赁</td><td><input type="text" id="t3_op2" value="翼享飞" onchange="autoSave()"></td><td><input type="text" id="t3_biz2" value="设备租赁" onchange="autoSave()"></td><td><input type="number" id="t3_fee2" value="150" onchange="autoSave()"></td><td><input type="text" id="t3_wxdep2" value="中" onchange="autoSave()"></td><td><input type="text" id="t3_geo2" value="起降场地" onchange="autoSave()"></td><td><input type="text" id="t3_risk2" value="电池安全" onchange="autoSave()"></td></tr>
+                    <tr><td>低空巴士</td><td><input type="text" id="t3_op3" value="云境通航" onchange="autoSave()"></td><td><input type="text" id="t3_biz3" value="短途观光" onchange="autoSave()"></td><td><input type="number" id="t3_fee3" value="599" onchange="autoSave()"></td><td><input type="text" id="t3_wxdep3" value="极高" onchange="autoSave()"></td><td><input type="text" id="t3_geo3" value="航线规划" onchange="autoSave()"></td><td><input type="text" id="t3_risk3" value="天气突变" onchange="autoSave()"></td></tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card">
+            <div class="card-title">🎤 访谈记录</div>
+            <div class="form-group"><label>游客问题</label><input type="text" id="t3_visit_q" onchange="autoSave()"></div>
+            <div class="form-group"><label>游客回答</label><textarea id="t3_visit_a" onchange="autoSave()"></textarea></div>
+            <div class="form-group"><label>运营者问题</label><input type="text" id="t3_op_q" onchange="autoSave()"></div>
+            <div class="form-group"><label>运营者回答</label><textarea id="t3_op_a" onchange="autoSave()"></textarea></div>
+        </div>
+        <div class="card">
+            <div class="card-title">💡 创新方案</div>
+            <div class="form-group"><label>创意一 + 气象保障建议</label><textarea id="t3_idea1" onchange="autoSave()"></textarea></div>
+            <div class="form-group"><label>创意二</label><textarea id="t3_idea2" onchange="autoSave()"></textarea></div>
+            <div class="stamp-area" id="t3MindMap" onclick="toggleStamp('t3MindMap','t3_mindmap')"><span>📎 点击上传思维导图（模拟）</span></div>
+        </div>
+        <div class="card">
+            <div class="card-title">✅ 完成签字</div>
+            <div class="stamp-area" id="t3Stamp" onclick="toggleStamp('t3Stamp','t3')">
+                <span class="stamp-icon">🖐️</span><span>文旅导师签字上传区</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 项目四 -->
+    <section class="page-section" id="page-task4">
+        <div class="section-title"><span class="icon-dot"></span>项目四 · 未来企业创业营</div>
+        <p class="section-subtitle">结合人地协调观，设计余杭低空绿色创业项目</p>
+        <div class="card">
+            <div class="card-title">📖 项目简介</div>
+            <p style="color:var(--text-secondary); line-height:1.8; margin-bottom:12px;">
+                创业不止追求效益，更要立足地域环境、顺应自然规律，用新质生产力实现产业、人居、生态共赢，践行人地协调。结合杭州余杭本土地形、气候、西溪湿地生态、科创资源，从以下方向中选择或自拟，设计一个兼顾发展与生态保护的低空绿色创业项目：
+            </p>
+            <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                <span class="tag tag-safe">🌾 智慧农业：智能种植、节水节地、减少化肥农药</span>
+                <span class="tag tag-warn">🏙️ 城市大脑：无人机巡检、火灾监测、短途物流</span>
+                <span class="tag tag-risk">🌿 AI生态服务：环境监测、生态修复、智慧管护</span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">💼 我设计的绿色低空新业态</div>
+            <div class="form-group">
+                <label for="t4_biz_plan">你的创业项目方案</label>
+                <textarea id="t4_biz_plan" rows="8" placeholder="请结合余杭本地的地形、气候、西溪湿地生态、余杭科创资源，设计一个兼顾发展与生态保护的低空绿色创业项目，说明项目名称、核心业务、技术路径、生态保护措施、预期效益。" onchange="autoSave()"></textarea>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+                <a href="https://www.xfyun.cn/" target="_blank" class="btn btn-primary btn-sm" style="text-decoration:none;">🎨 讯飞AI生成海报</a>
+                <a href="https://www.doubao.com/" target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none;">🎨 豆包AI生成海报</a>
+                <span style="color:var(--text-muted); font-size:0.85rem; margin-left:auto;" id="t4_wordcount">字数：0</span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">✅ 创业项目提交盖章区</div>
+            <div class="stamp-area" id="t4Stamp" onclick="toggleStamp('t4Stamp','t4')">
+                <span class="stamp-icon">🖐️</span><span style="color:var(--text-muted);">点击盖章确认提交</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- 成果中心 -->
+    <section class="page-section" id="page-result">
+        <div class="section-title"><span class="icon-dot"></span>成果中心 · 结业认证</div>
+        <p class="section-subtitle">我的低空成就清单 & 全能领航员证书</p>
+        <div class="card">
+            <div class="card-title">📦 我的低空成就清单</div>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;" id="checklistResult">
+                <label>☐ 数据采集手册</label>
+                <label>☐ 气象剖面图</label>
+                <label>☐ AI航线设计图</label>
+                <label>☐ 文旅调研报告</label>
+                <label>☐ 发展提案</label>
+                <label>☐ 小组汇报</label>
+            </div>
+        </div>
+        <div class="card" style="text-align:center;border:2px solid var(--gold);box-shadow:0 0 40px rgba(212,168,83,0.2);">
+            <div style="font-size:3rem;">📜</div>
+            <div class="card-title" style="justify-content:center;font-size:1.3rem;color:var(--gold-light);">全能领航员证书</div>
+            <p><strong>姓名：</strong><span id="certName">—</span></p>
+            <p><strong>金牌勋章数：</strong><span id="certBadges">0</span>/4</p>
+            <p><strong>总分：</strong><span id="certTotalScore">0</span>/400</p>
+            <p><strong>称号：</strong><span id="certTitle">见习领航员</span></p>
+            <p><strong>教师寄语：</strong><span id="certMsg">期待你在低空时代展翅翱翔！</span></p>
+            <p style="color:var(--text-muted);font-size:0.8rem;">研学机构：杭州余杭低空经济研学基地 · 中国飞谷 · 云境低空AI实验室</p>
+            <button class="btn btn-gold btn-sm" onclick="generateCertificate()">🏆 生成结业证书</button>
+        </div>
+    </section>
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+    const STATE_KEY = 'yuhang_lowalt_ai_platform_state';
+    let appState = {
+        student: { name: '', group: '', date: '' },
+        badges: [false, false, false, false],
+        stamps: { t1: false, t2: false, t3: false, t4: false, t3_mindmap: false },
+        task1: {}, task2: {}, task3: {}, task4: {},
+        quizDone: [false, false, false],
+        quizCorrect: [false, false, false],
+        scores: [0, 0, 0, 0],
+        levels: ['', '', '', '']
+    };
+
+    function loadState() {
+        try {
+            const raw = localStorage.getItem(STATE_KEY);
+            if (raw) {
+                const saved = JSON.parse(raw);
+                appState = { ...appState, ...saved };
+                if (!appState.stamps) appState.stamps = { t1: false, t2: false, t3: false, t4: false, t3_mindmap: false };
+                if (!appState.quizDone) appState.quizDone = [false, false, false];
+                if (!appState.quizCorrect) appState.quizCorrect = [false, false, false];
+                if (!appState.scores) appState.scores = [0, 0, 0, 0];
+                if (!appState.levels) appState.levels = ['', '', '', ''];
+                if (!appState.task4) appState.task4 = {};
+            }
+        } catch (e) {}
+    }
+
+    function saveState() { try { localStorage.setItem(STATE_KEY, JSON.stringify(appState)); } catch (e) { showToast('存储空间不足', 'info'); } }
+    function autoSave() { collectAllFormData(); saveState(); updateAllUI(); }
+    function saveAllData() { autoSave(); showToast('✅ 所有数据已保存！', 'success'); }
+    function resetAllData() {
+        if (confirm('确定要清除所有研学数据吗？此操作不可恢复！')) {
+            localStorage.removeItem(STATE_KEY);
+            appState = {
+                student: { name: '', group: '', date: '' },
+                badges: [false, false, false, false],
+                stamps: { t1: false, t2: false, t3: false, t4: false, t3_mindmap: false },
+                task1: {}, task2: {}, task3: {}, task4: {},
+                quizDone: [false, false, false],
+                quizCorrect: [false, false, false],
+                scores: [0, 0, 0, 0],
+                levels: ['', '', '', '']
+            };
+            updateAllUI(); resetAllForms(); showToast('🔄 数据已重置', 'info');
+        }
+    }
+
+    function collectAllFormData() {
+        appState.student.name = document.getElementById('stuName')?.value || '';
+        appState.student.group = document.getElementById('stuGroup')?.value || '';
+        appState.student.date = document.getElementById('stuDate')?.value || '';
+        const t1fields = ['t1_temp_0','t1_wdir_0','t1_ws_0','t1_vis_0','t1_sp_0','t1_temp_50','t1_wdir_50','t1_ws_50','t1_vis_50','t1_sp_50','t1_temp_100','t1_wdir_100','t1_ws_100','t1_vis_100','t1_sp_100'];
+        t1fields.forEach(id => { const el = document.getElementById(id); if(el) appState.task1[id] = el.value; });
+        appState.task1['t1_check1'] = document.getElementById('t1_check1')?.checked || false;
+        appState.task1['t1_check2'] = document.getElementById('t1_check2')?.checked || false;
+        appState.task1['t1_check3'] = document.getElementById('t1_check3')?.checked || false;
+        const t2el = document.getElementById('t2_route_desc'); if(t2el) appState.task2['route_desc'] = t2el.value;
+        ['op1','biz1','fee1','wxdep1','geo1','risk1','op2','biz2','fee2','wxdep2','geo2','risk2','op3','biz3','fee3','wxdep3','geo3','risk3','visit_q','visit_a','op_q','op_a','idea1','idea2'].forEach(id => { const el = document.getElementById('t3_'+id); if(el) appState.task3[id] = el.value; });
+        const bizEl = document.getElementById('t4_biz_plan'); if(bizEl) appState.task4['biz_plan'] = bizEl.value;
+    }
+
+    function restoreAllForms() {
+        if(appState.student.name) document.getElementById('stuName').value = appState.student.name;
+        if(appState.student.group) document.getElementById('stuGroup').value = appState.student.group;
+        if(appState.student.date) document.getElementById('stuDate').value = appState.student.date;
+        Object.keys(appState.task1).forEach(key => { const el = document.getElementById(key); if(el){ if(el.type==='checkbox') el.checked = appState.task1[key]; else el.value = appState.task1[key] || ''; } });
+        if(appState.task2['route_desc']){ const el = document.getElementById('t2_route_desc'); if(el) el.value = appState.task2['route_desc']; }
+        Object.keys(appState.task3).forEach(key => { const el = document.getElementById('t3_'+key); if(el) el.value = appState.task3[key] || ''; });
+        if(appState.task4['biz_plan']){ const el = document.getElementById('t4_biz_plan'); if(el) el.value = appState.task4['biz_plan']; }
+        updateStampUI();
+    }
+
+    function resetAllForms() {
+        document.getElementById('stuName').value = '';
+        document.getElementById('stuGroup').value = '';
+        document.getElementById('stuDate').value = '';
+        document.querySelectorAll('input[type="checkbox"]').forEach(el => el.checked = false);
+        const bizEl = document.getElementById('t4_biz_plan'); if(bizEl) bizEl.value = '';
+        updateStampUI(); updateAllUI();
+    }
+
+    function updateStampUI() {
+        ['t1Stamp','t2Stamp','t3Stamp','t4Stamp','t3MindMap'].forEach(id => {
+            const el = document.getElementById(id);
+            if(!el) return;
+            const key = id==='t3MindMap'?'t3_mindmap':id.replace('Stamp','').toLowerCase();
+            if(appState.stamps[key]){
+                el.classList.add('stamped'); el.querySelector('.stamp-icon').textContent = '✅';
+                el.querySelector('span:last-child').textContent = '已盖章确认';
+            } else {
+                el.classList.remove('stamped'); el.querySelector('.stamp-icon').textContent = '🖐️';
+                if(id==='t3MindMap') el.querySelector('span:last-child').textContent = '📎 点击上传思维导图（模拟）';
+                else el.querySelector('span:last-child').textContent = '点击盖章（教师签字上传区）';
+            }
+        });
+    }
+
+    function calcTask1Score() {
+        let score = 100;
+        const t1fields = ['t1_temp_0','t1_wdir_0','t1_ws_0','t1_vis_0','t1_sp_0',
+                         't1_temp_50','t1_wdir_50','t1_ws_50','t1_vis_50','t1_sp_50',
+                         't1_temp_100','t1_wdir_100','t1_ws_100','t1_vis_100','t1_sp_100'];
+        let missing = 0;
+        t1fields.forEach(id => { if (!document.getElementById(id)?.value) missing++; });
+        score -= Math.min(40, missing * 8);
+        const ai0 = document.getElementById('t1_ai_0')?.textContent;
+        if (!ai0 || ai0 === '—') score -= 40; // AI模拟与剖面图合计40分
+        else {
+            const err0 = parseFloat(document.getElementById('t1_err_0')?.textContent);
+            if (isNaN(err0) || err0 > 1) score -= 20;
+        }
+        return Math.max(0, score);
+    }
+
+    function calcTask2Score() {
+        let score = 100;
+        if (!window.userRouteLayer) score -= 50;
+        const text = document.getElementById('t2_route_desc')?.value || '';
+        if (text.includes('西溪核心') || text.includes('浙大一院')) score -= 30;
+        const totalScore = document.getElementById('t2_total_score')?.textContent;
+        if (!totalScore || totalScore === '—') score -= 20;
+        return Math.max(0, score);
+    }
+
+    function calcTask3Score() {
+        let score = 100;
+        const t3fields = ['op1','biz1','fee1','wxdep1','geo1','risk1',
+                         'op2','biz2','fee2','wxdep2','geo2','risk2',
+                         'op3','biz3','fee3','wxdep3','geo3','risk3'];
+        let missing = 0;
+        t3fields.forEach(id => { if (!document.getElementById('t3_'+id)?.value) missing++; });
+        score -= Math.min(30, missing * 5);
+        ['visit_q','visit_a','op_q','op_a'].forEach(id => { if (!document.getElementById('t3_'+id)?.value) score -= 15; });
+        if (!document.getElementById('t3_idea1')?.value) score -= 20;
+        if (!document.getElementById('t3_idea2')?.value) score -= 20;
+        return Math.max(0, score);
+    }
+
+    function calcTask4Score() {
+        let score = 100;
+        const biz = document.getElementById('t4_biz_plan')?.value || '';
+        if (!biz.trim()) return 0;
+        const hasMeaning = biz.includes('意义') || biz.includes('发展');
+        const hasRisk = biz.includes('风险') || biz.includes('干扰');
+        const hasCounter = biz.includes('对策') || biz.includes('措施') || biz.includes('保护');
+        if (!hasMeaning) score -= 20;
+        if (!hasRisk) score -= 20;
+        if (!hasCounter) score -= 20;
+        return Math.max(0, score);
+    }
+
+    function toggleStamp(stampId, key) {
+        if (appState.stamps[key]) {
+            appState.stamps[key] = false;
+            const idx = {t1:0, t2:1, t3:2, t4:3}[key];
+            appState.scores[idx] = 0;
+            appState.levels[idx] = '';
+            appState.badges[idx] = false;
+            updateStampUI(); saveState(); updateAllUI();
+            showToast('🔓 已取消盖章', 'info');
+            return;
+        }
+        const scoreFunc = {t1: calcTask1Score, t2: calcTask2Score, t3: calcTask3Score, t4: calcTask4Score};
+        const score = scoreFunc[key]();
+        const level = score >= 90 ? 'gold' : (score >= 80 ? 'silver' : (score >= 60 ? 'bronze' : ''));
+        if (score < 60) {
+            showToast(`任务得分不足60分（当前${score}分），请完善任务内容后重试！`, 'info');
+            return;
+        }
+        const idx = {t1:0, t2:1, t3:2, t4:3}[key];
+        appState.stamps[key] = true;
+        appState.scores[idx] = score;
+        appState.levels[idx] = level;
+        appState.badges[idx] = (level !== '');
+        updateStampUI(); saveState(); updateAllUI();
+        const names = {t1:'气象侦探', t2:'航线设计师', t3:'文旅调研员', t4:'低空建言者'};
+        const levelText = level === 'gold' ? '🥇金牌' : (level === 'silver' ? '🥈银牌' : '🥉铜牌');
+        showToast(`✅ 盖章成功！任务得分${score}分，解锁【${names[key]}】${levelText}勋章！`, 'success');
+    }
+
+    function updateAllUI() {
+        updateBadgeDisplay();
+        updateProgressBar();
+        updateChecklist();
+        updateCertInfo();
+        updateWordCount();
+        document.getElementById('header-date').textContent = appState.student.date || new Date().toISOString().split('T')[0];
+    }
+
+    function updateBadgeDisplay() {
+        const names = ['气象侦探','航线设计师','文旅调研员','低空建言者'];
+        const levelIcons = { bronze: '🥉', silver: '🥈', gold: '🥇' };
+        for(let i=0;i<4;i++){
+            const badge = document.getElementById('badge-'+i);
+            if(!badge) continue;
+            const level = appState.levels[i];
+            if (level) {
+                badge.className = `badge-medal ${level}`;
+                badge.innerHTML = `${levelIcons[level]} ${names[i]}`;
+            } else {
+                badge.className = 'badge-medal locked';
+                badge.innerHTML = '🔒 ' + names[i];
+            }
+        }
+        const masterBadge = document.getElementById('badge-master');
+        if (masterBadge) {
+            const goldCount = appState.levels.filter(l => l === 'gold').length;
+            if (goldCount === 4) {
+                masterBadge.className = 'badge-medal master';
+                masterBadge.innerHTML = '👑 全能领航员';
+            } else {
+                masterBadge.className = 'badge-medal locked';
+                masterBadge.innerHTML = '🔒 全能领航员';
+            }
+        }
+        const totalScore = appState.scores.reduce((a,b)=>a+b, 0);
+        const goldCount = appState.levels.filter(l => l === 'gold').length;
+        document.getElementById('totalScore').textContent = totalScore;
+        document.getElementById('goldCount').textContent = goldCount;
+    }
+
+    function updateProgressBar() {
+        const goldCount = appState.levels.filter(l => l === 'gold').length;
+        document.getElementById('progressBar').style.width = (goldCount/4*100)+'%';
+    }
+
+    function updateChecklist() {
+        const items = ['数据采集手册','气象剖面图','AI航线设计图','文旅调研报告','发展提案','小组汇报'];
+        const checks = [
+            appState.stamps['t1'], appState.stamps['t1'],
+            appState.stamps['t2'], appState.stamps['t3'],
+            appState.stamps['t4'], appState.stamps['t4']
+        ];
+        const levels = [
+            appState.levels[0], appState.levels[0],
+            appState.levels[1], appState.levels[2],
+            appState.levels[3], appState.levels[3]
+        ];
+        const levelTexts = { gold: '🥇金牌', silver: '🥈银牌', bronze: '🥉铜牌' };
+        document.getElementById('checklistResult').innerHTML = items.map((item, i) => {
+            const done = checks[i];
+            const level = levels[i];
+            const suffix = done && level ? ` (${levelTexts[level]})` : '';
+            return `<label style="color:${done?'var(--success)':'var(--text-muted)'}; font-weight:${done?700:400};">${done?'✅':'☐'} ${item}${suffix}</label>`;
+        }).join(' ');
+    }
+
+    function updateCertInfo() {
+        document.getElementById('certName').textContent = appState.student.name || '—';
+        const goldCount = appState.levels.filter(l => l === 'gold').length;
+        document.getElementById('certBadges').textContent = goldCount;
+        const totalScore = appState.scores.reduce((a,b)=>a+b, 0);
+        document.getElementById('certTotalScore').textContent = totalScore;
+        let title = '见习领航员';
+        if (totalScore >= 360) title = '全能领航员（金质）';
+        else if (totalScore >= 320) title = '优秀领航员（银质）';
+        else if (totalScore >= 240) title = '合格领航员（铜质）';
+        document.getElementById('certTitle').textContent = title;
+        const msg = title === '全能领航员（金质）' ? '恭喜获得全能领航员称号，表现优异！' :
+                    title === '优秀领航员（银质）' ? '表现出色，继续向金质冲锋！' :
+                    title === '合格领航员（铜质）' ? '已完成基础任务，还需努力提升！' : '继续努力，完成更多任务吧！';
+        document.getElementById('certMsg').textContent = msg;
+        document.getElementById('certMsg').style.color = title.includes('金') ? 'var(--gold-light)' : 'var(--text-secondary)';
+    }
+
+    function updateWordCount() {
+        const el = document.getElementById('t4_biz_plan');
+        const total = el ? el.value.length : 0;
+        const wc = document.getElementById('t4_wordcount');
+        if(wc) wc.textContent = '字数：'+total+(total>=300?' ✅达标':'');
+    }
+
+    function showToast(msg, type) {
+        const t = document.createElement('div'); t.className='toast toast-'+(type||'info'); t.textContent=msg;
+        document.getElementById('toastContainer').appendChild(t);
+        setTimeout(()=>t.remove(), 2800);
+    }
+
+    function refreshTask1AI() {
+        const ws0 = parseFloat(document.getElementById('t1_ws_0')?.value) || 3.2;
+        const ws50 = parseFloat(document.getElementById('t1_ws_50')?.value) || 5.8;
+        const ws100 = parseFloat(document.getElementById('t1_ws_100')?.value) || 8.1;
+        const ai0 = (ws0 + (Math.random()-0.5)*1.2).toFixed(1);
+        const ai50 = (ws50 + (Math.random()-0.5)*1.5).toFixed(1);
+        const ai100 = (ws100 + (Math.random()-0.5)*1.8).toFixed(1);
+        document.getElementById('t1_ai_0').textContent = ai0;
+        document.getElementById('t1_ai_50').textContent = ai50;
+        document.getElementById('t1_ai_100').textContent = ai100;
+        document.getElementById('t1_err_0').textContent = Math.abs(ws0-ai0).toFixed(1);
+        document.getElementById('t1_err_50').textContent = Math.abs(ws50-ai50).toFixed(1);
+        document.getElementById('t1_err_100').textContent = Math.abs(ws100-ai100).toFixed(1);
+        const shearReal = Math.log(ws100/Math.max(ws0,0.1))/Math.log(10);
+        const shearAI = Math.log(ai100/Math.max(ai0,0.1))/Math.log(10);
+        document.getElementById('t1_shear_real').textContent = shearReal.toFixed(3);
+        document.getElementById('t1_shear_ai').textContent = shearAI.toFixed(3);
+        document.getElementById('t1_shear_err').textContent = Math.abs(shearReal-shearAI).toFixed(3);
+        document.getElementById('t1_real_0').textContent = ws0.toFixed(1);
+        document.getElementById('t1_real_50').textContent = ws50.toFixed(1);
+        document.getElementById('t1_real_100').textContent = ws100.toFixed(1);
+        drawChartTask1();
+        autoSave();
+    }
+
+    function drawChartTask1() {
+        const canvas = document.getElementById('chartTask1');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const dpr = window.devicePixelRatio || 1;
+        const rect = canvas.parentElement.getBoundingClientRect();
+        const width = Math.min(rect.width - 4, 700);
+        const height = 400;
+        canvas.width = width * dpr; canvas.height = height * dpr;
+        canvas.style.width = width + 'px'; canvas.style.height = height + 'px';
+        ctx.setTransform(1,0,0,1,0,0); ctx.scale(dpr, dpr);
+        ctx.clearRect(0,0,width,height);
+
+        const real0 = parseFloat(document.getElementById('t1_ws_0')?.value) || 3.2;
+        const real50 = parseFloat(document.getElementById('t1_ws_50')?.value) || 5.8;
+        const real100 = parseFloat(document.getElementById('t1_ws_100')?.value) || 8.1;
+        const ai0 = parseFloat(document.getElementById('t1_ai_0')?.textContent) || 3.0;
+        const ai50 = parseFloat(document.getElementById('t1_ai_50')?.textContent) || 5.5;
+        const ai100 = parseFloat(document.getElementById('t1_ai_100')?.textContent) || 7.8;
+
+        const heights = [0, 50, 100];
+        const realData = [real0, real50, real100];
+        const aiData = [ai0, ai50, ai100];
+        const margin = { top: 40, right: 60, bottom: 50, left: 70 };
+        const plotW = width - margin.left - margin.right;
+        const plotH = height - margin.top - margin.bottom;
+        const allVals = [...realData, ...aiData];
+        const xMin = Math.floor(Math.min(...allVals) - 1);
+        const xMax = Math.ceil(Math.max(...allVals) + 1);
+
+        function xToPixel(val) { return margin.left + ((val - xMin) / (xMax - xMin)) * plotW; }
+        function yToPixel(h) { return margin.top + plotH - (h / 100) * plotH; }
+
+        ctx.strokeStyle = '#1e2a3a'; ctx.lineWidth = 0.5;
+        for (let i = 0; i <= 5; i++) {
+            const x = margin.left + (plotW / 5) * i;
+            ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, margin.top + plotH); ctx.stroke();
+        }
+        for (let i = 0; i <= 4; i++) {
+            const y = margin.top + (plotH / 4) * i;
+            ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(margin.left + plotW, y); ctx.stroke();
+        }
+        ctx.strokeStyle = '#6b7d95'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(margin.left, margin.top); ctx.lineTo(margin.left, margin.top+plotH); ctx.lineTo(margin.left+plotW, margin.top+plotH); ctx.stroke();
+
+        ctx.fillStyle = '#a0b4c8'; ctx.font = '12px "PingFang SC","Microsoft YaHei"'; ctx.textAlign = 'center';
+        for (let i = 0; i <= 5; i++) {
+            const val = xMin + ((xMax - xMin) / 5) * i;
+            ctx.fillText(val.toFixed(1), xToPixel(val), margin.top+plotH+20);
+        }
+        ctx.fillText('风速 (m/s)', margin.left+plotW/2, margin.top+plotH+40);
+        ctx.save(); ctx.translate(margin.left-45, margin.top+plotH/2); ctx.rotate(-Math.PI/2);
+        ctx.fillText('高度 (m)', 0, 0); ctx.restore();
+        [0,25,50,75,100].forEach(h => ctx.fillText(h, margin.left-10, yToPixel(h)+4));
+
+        ctx.strokeStyle = '#00b4d8'; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(xToPixel(realData[0]), yToPixel(0));
+        ctx.lineTo(xToPixel(realData[1]), yToPixel(50));
+        ctx.lineTo(xToPixel(realData[2]), yToPixel(100));
+        ctx.stroke();
+
+        realData.forEach((v, i) => {
+            ctx.fillStyle = '#00b4d8'; ctx.beginPath(); ctx.arc(xToPixel(v), yToPixel(heights[i]), 6, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xToPixel(v), yToPixel(heights[i]), 3, 0, Math.PI*2); ctx.fill();
+        });
+
+        ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 2; ctx.setLineDash([5, 3]);
+        ctx.beginPath();
+        ctx.moveTo(xToPixel(aiData[0]), yToPixel(0));
+        ctx.lineTo(xToPixel(aiData[1]), yToPixel(50));
+        ctx.lineTo(xToPixel(aiData[2]), yToPixel(100));
+        ctx.stroke(); ctx.setLineDash([]);
+
+        aiData.forEach((v, i) => {
+            ctx.strokeStyle = '#f39c12'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(xToPixel(v), yToPixel(heights[i]), 5, 0, Math.PI*2); ctx.stroke();
+        });
+
+        const legendX = margin.left + plotW - 140;
+        const legendY = margin.top + 10;
+        ctx.fillStyle = '#00b4d8'; ctx.fillRect(legendX, legendY, 16, 4);
+        ctx.fillStyle = '#e0e6f0'; ctx.textAlign = 'left'; ctx.fillText('实测数据', legendX + 22, legendY + 5);
+        ctx.strokeStyle = '#f39c12'; ctx.setLineDash([5, 3]); ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(legendX, legendY + 22); ctx.lineTo(legendX + 16, legendY + 22); ctx.stroke();
+        ctx.setLineDash([]); ctx.fillStyle = '#e0e6f0'; ctx.fillText('AI模拟数据', legendX + 22, legendY + 26);
+    }
+
+    let task2Map = null;
+    const WAYPOINT_DB = {
+        "南湖未来科学园无人机基地": [119.9116623, 30.254071],
+        "闲林港河道": [119.9425, 30.2586],
+        "英特外国语北侧": [119.9782, 30.2635],
+        "仓前居民区西北侧": [120.0193, 30.2672],
+        "五常湿地东侧边缘": [120.0485, 30.2688],
+        "文二西路南侧": [120.0612, 30.2693],
+        "西溪湿地公园北门": [120.0709678, 30.2699487]
+    };
+
+    function initTask2VectorMap() {
+        if (task2Map) { task2Map.invalidateSize(); return; }
+        task2Map = L.map('task2Map').setView([30.2645, 119.9960], 12);
+        var satelliteLayer = L.tileLayer('https://webst0{s}.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}', {
+            subdomains: ['0','1','2','3'],
+            minZoom: 8,
+            maxZoom: 18,
+            maxNativeZoom: 18,
+            bounds: [[29.5, 118.5], [31.0, 120.5]],
+            attribution: '&copy; 高德卫星影像'
+        }).addTo(task2Map);
+        var labelLayer = L.tileLayer('https://webrd02.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}', {
+            subdomains: ['1','2','3','4'],
+            opacity: 0.7,
+            minZoom: 8,
+            maxZoom: 18,
+            attribution: '&copy; 高德地名'
+        });
+        L.control.layers(null, { '遥感地形': satelliteLayer, '地名标注': labelLayer }).addTo(task2Map);
+    }
+
+    function generateRouteFromText() {
+        if (!task2Map) initTask2VectorMap();
+        if (window.userRouteLayer) { task2Map.removeLayer(window.userRouteLayer); window.userRouteLayer = null; }
+        if (window.userMarkers) { window.userMarkers.forEach(m => task2Map.removeLayer(m)); window.userMarkers = []; }
+        window.userMarkers = [];
+        const text = document.getElementById('t2_route_desc').value.trim();
+        if (!text) { document.getElementById('routeGenStatus').textContent = '⚠️ 请输入航线描述'; return; }
+        const segments = text.split('→').map(s => s.trim()).filter(s => s.length > 0);
+        const waypoints = [];
+        segments.forEach(seg => {
+            let bestMatch = null, bestLen = 0;
+            for (const name in WAYPOINT_DB) {
+                if (seg.includes(name) && name.length > bestLen) { bestMatch = name; bestLen = name.length; }
+            }
+            if (bestMatch) waypoints.push({ name: bestMatch, coords: WAYPOINT_DB[bestMatch] });
+        });
+        if (waypoints.length === 0) { document.getElementById('routeGenStatus').textContent = '⚠️ 未匹配到已收录地点'; return; }
+        const latlngs = waypoints.map(p => [p.coords[1], p.coords[0]]);
+        window.userRouteLayer = L.polyline(latlngs, { color: '#00b4d8', weight: 3, dashArray: [8, 5] }).addTo(task2Map);
+        if (L.polylineDecorator) {
+            L.polylineDecorator(window.userRouteLayer, {
+                patterns: [{ offset: '10%', repeat: '25%', symbol: L.Symbol.arrowHead({ pixelSize: 10, pathOptions: { color: '#00b4d8' } }) }]
+            }).addTo(task2Map);
+        }
+        waypoints.forEach((wp, i) => {
+            const isStart = i === 0, isEnd = i === waypoints.length - 1;
+            const color = isStart ? '#2ecc71' : (isEnd ? '#e74c3c' : '#f1c40f');
+            const radius = (isStart || isEnd) ? 8 : 5;
+            const marker = L.circleMarker([wp.coords[1], wp.coords[0]], {
+                radius, fillColor: color, color: '#ffffff', weight: 2, fillOpacity: 1
+            }).addTo(task2Map);
+            marker.bindPopup(`<b>${wp.name}</b><br>${wp.coords[0].toFixed(6)}, ${wp.coords[1].toFixed(6)}`);
+            window.userMarkers.push(marker);
+        });
+        task2Map.fitBounds(window.userRouteLayer.getBounds(), { padding: [40, 40] });
+        document.getElementById('routeGenStatus').textContent = `✅ 路线已生成 (${waypoints.length}个航点)`;
+        showToast('🛤️ 矢量路线已生成', 'success');
+    }
+
+    function runTask2Assessment() {
+        const ws100 = parseFloat(document.getElementById('t1_ws_100')?.value) || 8.1;
+        const vis0 = parseFloat(document.getElementById('t1_vis_0')?.value) || 8.5;
+        let wx = Math.round(100 - ws100*4 - (10-vis0)*3 + (Math.random()-0.5)*8);
+        wx = Math.min(98, Math.max(40, wx));
+        let eco = Math.round(75 + (Math.random()-0.5)*20); eco = Math.min(95, Math.max(55, eco));
+        let eff = Math.round(68 + (Math.random()-0.5)*22); eff = Math.min(92, Math.max(50, eff));
+        const total = Math.round((wx+eco+eff)/3);
+        document.getElementById('t2_score_wx').textContent = wx+'/100';
+        document.getElementById('t2_score_eco').textContent = eco+'/100';
+        document.getElementById('t2_score_eff').textContent = eff+'/100';
+        document.getElementById('t2_comment_wx').textContent = wx>=80?'气象条件良好':'需关注风切变';
+        document.getElementById('t2_comment_eco').textContent = eco>=80?'生态合规':'需调整航线';
+        document.getElementById('t2_comment_eff').textContent = eff>=75?'通勤效率高':'存在障碍物';
+        document.getElementById('t2_total_score').textContent = total;
+        document.getElementById('t2_risk_main').textContent = ws100>7?'100米阵风风险较高':'气象风险可控';
+        document.getElementById('t2_best_time').textContent = '清晨6:00-8:00 或 傍晚17:00-19:00';
+        document.getElementById('t2_distance').textContent = (8.5 + (Math.random()-0.5)*2).toFixed(1) + ' 公里';
+        generateRouteFromText();
+        autoSave();
+    }
+
+    function checkQuiz(btn, correct) {
+        const parent = btn.parentElement;
+        if (parent.dataset.done) return;
+        const options = parent.querySelectorAll('.quiz-option');
+        options.forEach(opt => {
+            if (opt.textContent.trim().charAt(0) === correct) opt.classList.add('correct');
+            if (opt === btn && opt.textContent.trim().charAt(0) !== correct) opt.classList.add('wrong');
+        });
+        parent.dataset.done = 'true';
+        const idx = Array.from(document.getElementById('quizArea').children).indexOf(parent);
+        if (idx >= 0 && idx < 3) {
+            appState.quizDone[idx] = true;
+            appState.quizCorrect[idx] = (btn.textContent.trim().charAt(0) === correct);
+        }
+        document.getElementById('quizResult').textContent = '✅ 已答对 ' + appState.quizCorrect.filter(Boolean).length + '/3 题';
+        saveState(); updateAllUI();
+    }
+
+    function generateCertificate() {
+        const name = appState.student.name || '研学学员';
+        const goldCount = appState.levels.filter(l => l === 'gold').length;
+        const totalScore = appState.scores.reduce((a,b)=>a+b, 0);
+        let title = '见习领航员';
+        if (totalScore >= 360) title = '全能领航员（金质）';
+        else if (totalScore >= 320) title = '优秀领航员（银质）';
+        else if (totalScore >= 240) title = '合格领航员（铜质）';
+        const msg = title === '全能领航员（金质）' ? '恭喜获得全能领航员称号，表现优异！' :
+                    title === '优秀领航员（银质）' ? '表现出色，继续向金质冲锋！' :
+                    title === '合格领航员（铜质）' ? '已完成基础任务，还需努力提升！' : '继续努力，完成更多任务吧！';
+        const modal = document.createElement('div');
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);display:flex;align-items:center;justify-content:center;z-index:10000;';
+        const card = document.createElement('div');
+        card.style.cssText = 'background:linear-gradient(135deg,#1a1f2e,#0d1117);border:2px solid #d4a853;border-radius:16px;padding:30px;max-width:500px;width:90%;text-align:center;color:#e0e6f0;box-shadow:0 0 40px rgba(212,168,83,0.3);';
+        card.innerHTML = `
+            <div style="font-size:3rem;">📜</div>
+            <h2 style="color:#f0c96d;">全能领航员证书</h2>
+            <p><strong>姓名：</strong>${name}</p>
+            <p><strong>金牌勋章数：</strong>${goldCount}/4</p>
+            <p><strong>总分：</strong>${totalScore}/400</p>
+            <p><strong>称号：</strong>${title}</p>
+            <p><strong>教师寄语：</strong>${msg}</p>
+            <p style="color:#6b7d95;font-size:0.8rem;">研学机构：杭州余杭低空经济研学基地 · 中国飞谷 · 云境低空AI实验室</p>
+        `;
+        const btnGroup = document.createElement('div');
+        btnGroup.style.cssText = 'margin-top:20px;display:flex;gap:10px;justify-content:center;';
+        const downloadBtn = document.createElement('button');
+        downloadBtn.textContent = '📥 下载证书为图片';
+        downloadBtn.className = 'btn btn-gold btn-sm';
+        downloadBtn.onclick = () => {
+            if (typeof html2canvas === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://html2canvas.hertzen.com/dist/html2canvas.min.js';
+                script.onload = () => downloadCert(card);
+                document.head.appendChild(script);
+            } else { downloadCert(card); }
+        };
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '关闭'; closeBtn.className = 'btn btn-outline btn-sm';
+        closeBtn.onclick = () => document.body.removeChild(modal);
+        btnGroup.append(downloadBtn, closeBtn); card.appendChild(btnGroup);
+        modal.appendChild(card); document.body.appendChild(modal);
+    }
+
+    function downloadCert(element) {
+        html2canvas(element, { backgroundColor: null, scale: 2 }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = '全能领航员证书.png'; link.href = canvas.toDataURL('image/png'); link.click();
+        }).catch(() => alert('生成图片失败，请截图保存'));
+    }
+
+    function switchTab(pageId) {
+        document.querySelectorAll('.page-section').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        const section = document.getElementById(pageId);
+        if (section) section.classList.add('active');
+        const tab = document.querySelector(`[data-page="${pageId}"]`);
+        if (tab) tab.classList.add('active');
+        if (pageId === 'page-task1') setTimeout(drawChartTask1, 300);
+        if (pageId === 'page-task2') setTimeout(() => { if (!task2Map) initTask2VectorMap(); else task2Map.invalidateSize(); }, 100);
+        if (pageId === 'page-result') updateAllUI();
+        updateWordCount();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function init() {
+        loadState(); restoreAllForms(); updateAllUI(); updateStampUI();
+        document.getElementById('header-date').textContent = appState.student.date || new Date().toISOString().split('T')[0];
+        document.querySelectorAll('.nav-tab').forEach(tab => {
+            tab.addEventListener('click', function() { switchTab(this.getAttribute('data-page')); });
+        });
+        setTimeout(() => { refreshTask1AI(); drawChartTask1(); }, 500);
+        setTimeout(() => { if (document.getElementById('t2_route_desc')?.value.trim()) initTask2VectorMap(); }, 600);
+        updateWordCount();
+        document.getElementById('t4_biz_plan')?.addEventListener('input', updateWordCount);
+    }
+    document.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('resize', () => {
+        if (document.getElementById('page-task1')?.classList.contains('active')) setTimeout(drawChartTask1, 200);
+        if (document.getElementById('page-task2')?.classList.contains('active')) setTimeout(() => { if (task2Map) task2Map.invalidateSize(); }, 200);
+    });
+    setInterval(() => { collectAllFormData(); saveState(); }, 15000);
+</script>
+</body>
+</html>
